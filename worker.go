@@ -13,7 +13,7 @@ type worker struct {
 }
 
 // Processor type for processor
-type Processor func(interface{}) error
+type Processor func([]interface{}) error
 
 func newWorker(in chan []interface{}, out chan error, wg *sync.WaitGroup, proc Processor) *worker {
 	return &worker{in: in, out: out, wg: wg, proc: proc}

@@ -37,21 +37,18 @@ func NewDispatcher(batchStep, nbWorkers int, proc Processor) *Dispatcher {
 // stop if one error is encountered
 func (d *Dispatcher) Process(reqToProcess []interface{}) (err error) {
 	var i, imax = 0, 0
+Loop:
 	for {
 		select {
 		//we receive one error from worker, need to stop
 		case err = <-d.out:
-			close(d.in)
-			close(d.out)
-			return
+			break Loop
 
 		default:
 			// iteration after all bids have been processed
 			// need to close chanels and return
 			if i > 0 && i >= len(reqToProcess) {
-				close(d.in)
-				close(d.out)
-				return
+				break Loop
 			}
 
 			// send chunk of requests to process through channel
@@ -72,4 +69,9 @@ func (d *Dispatcher) Process(reqToProcess []interface{}) (err error) {
 			}
 		}
 	}
+
+	d.wg.Wait()
+	close(d.in)
+	close(d.out)
+	return
 }
