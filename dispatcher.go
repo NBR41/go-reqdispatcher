@@ -4,6 +4,8 @@ import (
 	"sync"
 )
 
+// Not threadsafe
+
 // Dispatcher struct for dispatcher
 type Dispatcher struct {
 	in        chan []interface{}
@@ -15,22 +17,24 @@ type Dispatcher struct {
 
 // NewDispatcher returns new instance of dispatcher
 func NewDispatcher(batchStep, nbWorkers int, proc Processor) *Dispatcher {
-	var d Dispatcher
+	var d = &Dispatcher{
+		batchStep: batchStep,
 
-	// channel to send bid chunk to workers
-	d.in = make(chan []interface{})
+		// channel to send bid chunk to workers
+		in: make(chan []interface{}),
 
-	// channel to receive error from worker
-	d.out = make(chan error, 1)
+		// channel to receive error from worker
+		out: make(chan error, nbWorkers),
+	}
 
 	// by default 5 workers
 	d.workers = make([]*worker, nbWorkers, nbWorkers)
 	var i int
 	for i = 0; i < nbWorkers; i++ {
-		d.workers[i] = newWorker(d.in, d.out, &d.wg, proc)
+		d.workers[i] = newWorker(i, d.in, d.out, &d.wg, proc)
 		d.workers[i].start()
 	}
-	return &d
+	return d
 }
 
 // Process process all the request of reqToProcess
@@ -56,7 +60,6 @@ Loop:
 			if imax > len(reqToProcess) {
 				imax = len(reqToProcess)
 			}
-
 			d.wg.Add(1)
 			d.in <- reqToProcess[i:imax]
 			i = imax
@@ -74,4 +77,9 @@ Loop:
 	close(d.in)
 	close(d.out)
 	return
+}
+
+func (d *Dispatcher) Stop() {
+	close(d.in)
+	close(d.out)
 }

@@ -1,18 +1,12 @@
 package dispatcher
 
 import (
+	"errors"
 	"runtime"
 	"sync"
 	"testing"
+	"time"
 )
-
-type incCount struct {
-	i int
-}
-
-func (t *incCount) inc() {
-	t.i++
-}
 
 func TestWorkerWhenGoRoutineCreated(t *testing.T) {
 	var proc = func(v []interface{}) error {
@@ -22,50 +16,86 @@ func TestWorkerWhenGoRoutineCreated(t *testing.T) {
 	var out = make(chan error, 1)
 	var wg = &sync.WaitGroup{}
 
-	w := newWorker(in, out, wg, proc)
+	w := newWorker(1, in, out, wg, proc)
 
 	var goroutinecount = runtime.NumGoroutine()
-
 	w.start()
 	if goroutinecount+1 != runtime.NumGoroutine() {
-		t.Fatal("no new go routine on start")
+		t.Fatalf("no new go routine on start, current go routine count %d", runtime.NumGoroutine())
 	}
+	close(in)
+	checkThatGoRoutinesAreClosed(t)
 }
 
 func TestWorkerWhenReceiveRequestApplyFunc(t *testing.T) {
-
 	var proc = func(v []interface{}) error {
-		p, ok := v[0].(*incCount)
+		p, ok := v[0].(*int)
 
 		if ok {
-			p.inc()
+			*p++
 		}
 		return nil
 	}
 
-	var v = &incCount{}
+	var v = 0
 	var in = make(chan []interface{}, 1)
 	var out = make(chan error, 1)
 	var wg = &sync.WaitGroup{}
 
-	w := newWorker(in, out, wg, proc)
+	w := newWorker(1, in, out, wg, proc)
+	w.start()
+	wg.Add(1)
+	in <- []interface{}{&v}
+	wg.Wait()
+
+	if v != 1 {
+		t.Fatalf("unexpected increment %d", v)
+	}
+	close(in)
+	checkThatGoRoutinesAreClosed(t)
+}
+
+func TestWorkerWhenReceiveRequestApplyFuncPutErrorOnErrorChannel(t *testing.T) {
+	var experr = errors.New("test")
+	var proc = func(v []interface{}) error {
+		return experr
+	}
+
+	var v = 1
+	var in = make(chan []interface{}, 1)
+	var out = make(chan error, 1)
+	var wg = &sync.WaitGroup{}
+
+	w := newWorker(1, in, out, wg, proc)
 	w.start()
 	wg.Add(1)
 	in <- []interface{}{v}
 	wg.Wait()
 
-	if v.i != 1 {
-		t.Fatalf("unexpected increment %d", v.i)
+	err := <-out
+	if err != experr {
+		t.Fatalf("unexpected error: %s", err)
 	}
-
+	close(in)
+	checkThatGoRoutinesAreClosed(t)
 }
 
-/*
-func TestWorkerWhenReceiveRequestApplyFuncPutErrorOnErrorChannel(*testing.T) {
+var initialGoRoutineCount = runtime.NumGoroutine() + 1
 
+func checkThatGoRoutinesAreClosed(t *testing.T) {
+	var i int
+	for {
+
+		if initialGoRoutineCount == runtime.NumGoroutine() {
+			t.Logf("waiting stop %d == %d", initialGoRoutineCount, runtime.NumGoroutine())
+			break
+		}
+
+		t.Logf("waiting %d goroutines", runtime.NumGoroutine())
+		if i == 10 {
+			t.Fatal("all go routines are not closed")
+		}
+		i++
+		time.Sleep(5 * time.Millisecond)
+	}
 }
-
-func TestWorkerOnClosedInChannelStopRoutine(*testing.T) {
-
-}
-*/
