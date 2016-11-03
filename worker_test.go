@@ -1,13 +1,14 @@
 package dispatcher
 
 import (
-	"errors"
+	_ "errors"
 	"runtime"
-	"sync"
+	_ "sync"
 	"testing"
 	"time"
 )
 
+/*
 func TestWorkerWhenGoRoutineCreated(t *testing.T) {
 	var proc = func(v []interface{}) error {
 		return nil
@@ -79,7 +80,7 @@ func TestWorkerWhenReceiveRequestApplyFuncPutErrorOnErrorChannel(t *testing.T) {
 	close(in)
 	checkThatGoRoutinesAreClosed(t)
 }
-
+*/
 var initialGoRoutineCount = runtime.NumGoroutine() + 1
 
 func checkThatGoRoutinesAreClosed(t *testing.T) {

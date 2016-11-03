@@ -2,8 +2,10 @@ package dispatcher
 
 import (
 	"errors"
+	"fmt"
 	"runtime"
 	"testing"
+	"time"
 )
 
 func TestDispatcherOnNew(t *testing.T) {
@@ -46,13 +48,49 @@ func TestDispatcherProcessWithError(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	var closed bool
-	if _, closed = <-d.in; closed {
+	var opened bool
+	if _, opened = <-d.in; opened {
 		t.Fatal("in channel not closed")
 	}
 
-	if _, closed = <-d.out; closed {
+	if _, opened = <-d.out; opened {
+		t.Fatal("out channel not closed")
+	}
+
+	checkThatGoRoutinesAreClosed(t)
+}
+
+func TestDispatcherProcessWithOnlyError(t *testing.T) {
+	var experr = errors.New("test")
+	var proc = func(v []interface{}) error {
+		<-time.After(100 * time.Millisecond)
+		return experr
+	}
+	var batchStep, nbWorkers = 1, 2
+	var d = NewDispatcher(batchStep, nbWorkers, proc)
+
+	var v1, v2, v3, v4 = 1, 5, 8, 10
+	var err = d.Process([]interface{}{&v1, &v2, &v3, &v4})
+
+	if err != experr {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	fmt.Println(err)
+
+	var opened bool
+	if _, opened = <-d.in; opened {
+		fmt.Println(opened)
 		t.Fatal("in channel not closed")
+	}
+
+	// empty d.out errors
+	for _ := range d.out {
+
+	}
+
+	if _, opened = <-d.out; opened {
+		fmt.Println(opened)
+		t.Fatal("out channel not closed")
 	}
 
 	checkThatGoRoutinesAreClosed(t)
@@ -79,13 +117,13 @@ func TestDispatcherProcess(t *testing.T) {
 		t.Fatalf("unexpected value: %d %d %d %d %d", v1, v2, v3, v4, v5)
 	}
 
-	var closed bool
-	if _, closed = <-d.in; closed {
+	var opened bool
+	if _, opened = <-d.in; opened {
 		t.Fatal("in channel not closed")
 	}
 
-	if _, closed = <-d.out; closed {
-		t.Fatal("in channel not closed")
+	if _, opened = <-d.out; opened {
+		t.Fatal("out channel not closed")
 	}
 
 	checkThatGoRoutinesAreClosed(t)

@@ -33,8 +33,6 @@ func (w *worker) start() {
 			err := w.proc(requests)
 			if err != nil {
 				w.out <- err
-				w.wg.Done()
-				return
 			}
 
 			w.wg.Done()

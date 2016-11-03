@@ -1,6 +1,7 @@
 package dispatcher
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -40,6 +41,7 @@ func NewDispatcher(batchStep, nbWorkers int, proc Processor) *Dispatcher {
 // Process process all the request of reqToProcess
 // stop if one error is encountered
 func (d *Dispatcher) Process(reqToProcess []interface{}) (err error) {
+	fmt.Println("start process")
 	var i, imax = 0, 0
 Loop:
 	for {
@@ -75,7 +77,9 @@ Loop:
 
 	d.wg.Wait()
 	close(d.in)
+
 	close(d.out)
+	fmt.Println("d.out closed")
 	return
 }
 
