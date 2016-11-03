@@ -2,7 +2,6 @@ package dispatcher
 
 import (
 	"errors"
-	"fmt"
 	"runtime"
 	"testing"
 	"time"
@@ -75,21 +74,18 @@ func TestDispatcherProcessWithOnlyError(t *testing.T) {
 	if err != experr {
 		t.Fatalf("unexpected error: %s", err)
 	}
-	fmt.Println(err)
 
 	var opened bool
 	if _, opened = <-d.in; opened {
-		fmt.Println(opened)
 		t.Fatal("in channel not closed")
 	}
 
 	// empty d.out errors
-	for _ := range d.out {
+	for _ = range d.out {
 
 	}
 
 	if _, opened = <-d.out; opened {
-		fmt.Println(opened)
 		t.Fatal("out channel not closed")
 	}
 
