@@ -1,2 +1,2 @@
-# go-reqdispatcher
-request dispatcher in go 
+# goreqdispatcher
+request dispatcher in go

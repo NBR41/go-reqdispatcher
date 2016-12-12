@@ -1,4 +1,4 @@
-package dispatcher
+package goreqdispatcher
 
 import (
 	"sync"
@@ -40,7 +40,7 @@ func NewDispatcher(batchStep, nbWorkers int, proc Processor) *Dispatcher {
 // Process process all the request of reqToProcess
 // stop if one error is encountered
 func (d *Dispatcher) Process(reqToProcess []interface{}) (err error) {
-	var i, imax = 0, 0
+	var i, imax int
 Loop:
 	for {
 		select {
@@ -79,6 +79,7 @@ Loop:
 	return
 }
 
+// Stop stops the dispatcher
 func (d *Dispatcher) Stop() {
 	close(d.in)
 	close(d.out)
